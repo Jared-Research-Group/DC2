@@ -246,6 +246,8 @@ std::pair<bool, std::string> InitXirisCamera(std::string ipAddress, float frame_
     }
     */ 
 
+    camera->ResetTimeStamps();
+
     // set frame count to 0. Unclear if this will increment during the pause (same frame is still streamed). TODO: investigate
     if (!camera->ResetFrameCounter()) {
 

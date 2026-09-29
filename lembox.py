@@ -60,7 +60,7 @@ class LEMBox(sensors.BufferedSensor):
         self.buffer = np.array(lembox.sampleBuffer()) # type: ignore
         
         if self.buffer.size > 0:
-            self.buffer_time = np.astype(((np.arange(len(self.buffer[0])) / self.acquisition_rate) * 1e9) + self.last_time + self.timestamp, np.uint64)
+            self.buffer_time = np.astype(((np.arange(len(self.buffer[0])) / self.acquisition_rate) * 1e9) + self.last_time + self.timestep, np.uint64)
             self.last_time = self.buffer_time[-1]
             
         else:

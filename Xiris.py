@@ -91,3 +91,7 @@ class Xiris(sensors.BaseSensor):
 
         if self.flag_initialized:
             xiris.deleteCamera() # type: ignore
+
+if __name__ == '__main__':
+
+    DC2_helpers.single_sensor_display(Xiris)
