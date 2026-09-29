@@ -1,6 +1,7 @@
 #include <nanobind/nanobind.h>
-#include <nanobind/stl/string.h>
 #include <nanobind/stl/pair.h>
+#include <nanobind/stl/vector.h>
+#include <nanobind/stl/string.h>
 
 #include <string>
 #include <queue>
@@ -67,7 +68,7 @@ class MyXirisCamera:
 
         std::string ipAddress;
         bool isRecording = false;
-        ThreadSafeQueue<std::pair<ULONGLONG, std::vector<std::byte>>> frameBuffer;
+        ThreadSafeQueue<std::pair<ULONGLONG, std::vector<uint8_t>>> frameBuffer;
 
         MyXirisCamera(const std::string ip, WeldSDK::CameraClass type = WeldSDK::CameraClass::XVT1800, bool recordRaw = true, bool recordPng = false):
             WeldSDK::WeldCamera(),
@@ -129,7 +130,7 @@ class MyXirisCamera:
                     XImageLib::CRawImage img(*args.RawImage);
 
                     // initialize a vector of bytes of correct size ot hold the image we found
-                    std::vector<std::byte> bytes(sizeof(XImageLib::CRawImage));
+                    std::vector<uint8_t> bytes(sizeof(XImageLib::CRawImage));
 
                     // copy our image into the byte array
                     std::memcpy(bytes.data(), &img, sizeof(XImageLib::CRawImage));
@@ -320,14 +321,14 @@ std::pair<bool, std::string> XirisStartRecording() {
     return std::make_pair(true, msg);
 }
 
-std::pair<ULONGLONG, std::vector<std::byte>> XirisGetFrame() {
-
+std::pair<ULONGLONG, std::vector<uint8_t>> XirisGetFrame() {
     if (!camera->frameBuffer.empty()) {
         return camera->frameBuffer.pop();
+
     } else {
 
-        std::vector<std::byte> empty_vector;
-        return std::make_pair(0, empty_vector);
+        std::vector<uint8_t> empty_vector;
+        return std::make_pair((ULONGLONG)0, empty_vector);
     }
 }
 

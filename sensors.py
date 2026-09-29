@@ -51,7 +51,7 @@ class BaseSensor:
         assert isinstance(self.acquisition_rate, (float, int))
         
         # chunk to 1MB chunks (recommendation of zarr docs)
-        self.time_chunk = (math.ceil(10 ** 6 / (math.prod(self.shape) * 8)),)     # TODO: what type are we using? Always float/int64?
+        self.time_chunk = (math.ceil(10 ** 6 / (math.prod(self.shape) * np.dtype(self.dtype).itemsize)),)     # TODO: what type are we using? Always float/int64?
         
         # if we are handling one/multiple 1D timeseries columns, chunk down each column separately (allow for selective column reads)
         if len(self.shape) < 1:

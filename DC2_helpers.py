@@ -100,7 +100,8 @@ def single_sensor_display(sensor_obj, sensor_args = {}):
                     self.sample_time = self.sample_time[-1]
                     self.sample      = self.sample[-1]
 
-                print(f'{sensor_obj.__name__}\ttime: {datetime.fromtimestamp(self.sample_time * 1e-9)}\tvalue: {self.sample:<20}', end='\r') # flush=True)
+                if not isinstance(self.sample, bytes): print(f'{sensor_obj.__name__}\ttime: {datetime.fromtimestamp(self.sample_time * 1e-9)}\tvalue: {self.sample:<20}', end='\r') # flush=True)
+                else:                                  print(f'{sensor_obj.__name__}\ttime: {datetime.fromtimestamp(self.sample_time * 1e-9)}\tvalue: {self.sample}', end='\r')
                 
                 return ret
 
