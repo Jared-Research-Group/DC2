@@ -71,17 +71,23 @@ def single_sensor_display(sensor_obj, sensor_args = {}):
         def __init__(self, sensor_args):
             super(printing_sensor, self).__init__(**sensor_args)
 
-        if issubclass(sensor_obj.__class__, sensors.BufferedSensor):
+        if issubclass(sensor_obj, sensors.BufferedSensor):
             def sample_sensor(self, *args, **kwargs):
 
                 ret = super(printing_sensor, self).sample_sensor(*args, **kwargs)
 
-                # while self.buffer_time holds a list of samples, index another layer into self.buffer / self.buffer_time
-                while not type(self.buffer_time) in [np.uint64, int]:
-                    self.buffer_time = self.buffer_time[-1]
-                    self.buffer      = self.buffer[-1]
+                if self.buffer.size > 0:
+                    # while self.buffer_time holds a list of samples, index another layer into self.buffer / self.buffer_time
+                    #while not type(self.buffer_time) in [np.uint64, int]:
+                        #self.buffer_time = self.buffer_time[-1]
+                        #self.buffer      = self.buffer[-1]
+                        
+                    #self.buffer_time = self.buffer_time[-1]
+                    #self.buffer = self.buffer[:, -1]
 
-                print(f'{sensor_obj.__name__}\ttime: {datetime.fromtimestamp(self.sample_time * 1e-9)}\tvalue: {self.sample:<20}', end='\r') # flush=True)
+                    #print(f'{sensor_obj.__name__}\ttime: {datetime.fromtimestamp(self.buffer_time * 1e-9)}\tvalue: {str(self.buffer):<20}', end='\r') # flush=True)
+                    
+                    print(self.buffer)
                 
                 return ret
 
@@ -113,7 +119,12 @@ def single_sensor_display(sensor_obj, sensor_args = {}):
 
     while True:
         
-        if keyboard.is_pressed('q'):
+        try:
+            if keyboard.is_pressed('q'):
+                sensor.stop_collection()
+                break
+            
+        except KeyboardInterrupt:
             sensor.stop_collection()
             break
 
