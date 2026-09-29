@@ -53,18 +53,26 @@ class LEMBox(sensors.BufferedSensor):
 
         super(LEMBox, self).collection_thread()
 
-        lembox.stopCollection() # type: ignore
-
     def sample_sensor(self):
 
-        self.buffer = lembox.sampleBuffer() # type: ignore
-        self.buffer_time = np.astype(((np.arange(len(self.buffer[0])) / self.acquisition_rate) * 1e9) + self.last_time, np.uint64)
-
-        self.last_time = self.buffer_time[-1]
+        self.buffer = np.array(lembox.sampleBuffer()) # type: ignore
+        
+        if self.buffer.size > 0:
+            self.buffer_time = np.astype(((np.arange(len(self.buffer[0])) / self.acquisition_rate) * 1e9) + self.last_time, np.uint64)
+            self.last_time = self.buffer_time[-1]
+            
+        else:
+            self.buffer_time = np.array([])
 
         if self.group is not None:
             self.buffers.put(self.buffer)
             self.buffer_times.put(self.buffer_time)
+            
+    def stop_collection(self):
+    
+        lembox.stopCollection() # type: ignore
+        
+        super(LEMBox, self).stop_collection()
 
     def __del__(self):
 

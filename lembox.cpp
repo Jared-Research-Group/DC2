@@ -1,8 +1,10 @@
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/pair.h>
 #include <nanobind/stl/vector.h>
+#include <nanobind/stl/string.h>
 
 #include <vector>
+#include <string>
 
 #include <windows.h>
 #include <olmem.h>
@@ -51,8 +53,8 @@ BOOL CALLBACK GetDriver(LPSTR lpszName, LPSTR lpszEntry, LPARAM lParam) { // enu
         return TRUE;     // true to continue
 }
 
-std::pair<BOOL, char*> detectBoard() {
-    char msg[256];
+std::pair<BOOL, std::string> detectBoard() {
+    std::string msg = "";
 
     // enumerate all detected boards. Each seen board is sent to the GetDriver callback. Write info of the
     // first board we successfully connect to into board.
@@ -60,13 +62,13 @@ std::pair<BOOL, char*> detectBoard() {
 
         // if we get an enumeration error, return False
 
-        sprintf(msg, "Failed to enumerate boards");
+        msg = "Failed to enumerate boards";
         return std::make_pair(FALSE, msg);
     }
 
     // if we didn't connect to any boards, return False
     if (board.hdrvr == NULL) {
-        sprintf(msg, "No DT boards found");
+        msg = "No DT boards found";
         return std::make_pair(FALSE, msg);
     }
 
@@ -74,19 +76,19 @@ std::pair<BOOL, char*> detectBoard() {
     return std::make_pair(TRUE, msg);
 }
 
-std::pair<BOOL, char*> configureADC(DBL freq) { // default 20 kHz sample rate
-    char msg[256];
+std::pair<BOOL, std::string> configureADC(DBL freq) { // default 20 kHz sample rate
+    std::string msg = "";
 
     // check that A/D subsystem exists
     UINT numberADs = 0;
     if (olDaGetDevCaps(board.hdrvr, OLDC_ADELEMENTS, &numberADs) != OLNOERROR) {
-        sprintf(msg, "Failed to get device capabilities");
+        msg = "Failed to get device capabilities";
         return std::make_pair(FALSE, msg);
     }
 
     // get A/D subsystem
     if (olDaGetDASS(board.hdrvr, OLSS_AD, 0, &board.hdass) != OLNOERROR) {
-        sprintf(msg, "Failed to get ADC subsystem");
+        msg = "Failed to get ADC subsystem";
         return std::make_pair(FALSE, msg);
     }
 
@@ -102,20 +104,19 @@ std::pair<BOOL, char*> configureADC(DBL freq) { // default 20 kHz sample rate
         (status = olDaSetChannelListSize(board.hdass, NUM_CHANNELS)) != OLNOERROR || // swapped position w/ entry calls
         (status = olDaSetChannelListEntry(board.hdass, 0, VOLTAGE_CHANNEL)) != OLNOERROR ||
         (status = olDaSetChannelListEntry(board.hdass, 1, CURRENT_CHANNEL)) != OLNOERROR) {
-            sprintf(msg, "ADC configuration failed");
+            msg = "ADC configuration failed";
             return std::make_pair(FALSE, msg);
     }
 
     if ((status = olDaConfig(board.hdass)) != OLNOERROR) {
-        sprintf(msg, "Failed to apply configuration");
-        return std::make_pair(FALSE, msg);
+        msg = "Failed to apply configuration";
     }
 
     return std::make_pair(TRUE, msg);
 }
 
-std::pair<BOOL, char*> initBoard(DBL freq = 20000., UINT buffer_len = 1024) {
-    char msg[256];
+std::pair<BOOL, std::string> initBoard(DBL freq = 20000., UINT buffer_len = 1024) {
+    std::string msg = "";
 
     std::pair configure_result = configureADC(freq);
     if (!configure_result.first) {
@@ -126,18 +127,18 @@ std::pair<BOOL, char*> initBoard(DBL freq = 20000., UINT buffer_len = 1024) {
     buffers = (HBUF*)calloc(NUM_BUFFERS, sizeof(HBUF));
     if (!buffers) {
 
-        sprintf(msg, "buffer alloc failed");
+        msg = "buffer alloc failed";
         return std::make_pair(FALSE, msg);
     }
 
     // allocate memory for each buffer in our list
     for (int i = 0; i < NUM_BUFFERS; i++) {
         if (olDmCallocBuffer(0, 0, buffer_len * NUM_CHANNELS, 2, &buffers[i]) != OLNOERROR) {
-            sprintf(msg, "buffer setup failed");
+            msg = "buffer setup failed";
             return std::make_pair(FALSE, msg);
         }
         if (olDaPutBuffer(board.hdass, buffers[i]) != OLNOERROR) {
-            sprintf(msg, "buffer queue failed");
+            msg = "buffer queue failed";
             return std::make_pair(FALSE, msg);
         }
     }
@@ -183,13 +184,13 @@ std::vector<std::vector<DBL>> processAcquisition() {
 
                 // init output buffer
                 buffer.resize(2);
-                buffer[0].resize(validSamples); // voltage
-                buffer[1].resize(validSamples); //current
+                buffer[0].resize(validSamples / 2); // voltage
+                buffer[1].resize(validSamples / 2); //current
 
                 for (ULNG i = 0; i < validSamples; i += NUM_CHANNELS) {
                     WORD voltageRaw = samples[i];
                     WORD currentRaw = samples[i + 1];
-
+                    
                     buffer[0][i / 2] = ConvertToDBL(voltageRaw, 16, OL_ENC_BINARY, 10., -10.) * 10.; // apply voltage scaling
                     buffer[1][i / 2] = ConvertToDBL(currentRaw, 16, OL_ENC_BINARY, 10., -10.) * 100.; // apply current scaling
                 }

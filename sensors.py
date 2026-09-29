@@ -167,7 +167,9 @@ class BaseSensor:
     def stop_collection(self):
 
         assert isinstance(self.collector_thread, threading.Thread)
-        assert isinstance(self.writer_thread   , threading.Thread)
+        
+        if self.group is not None:
+            assert isinstance(self.writer_thread   , threading.Thread)
 
         with self.lock:
             flag_is_collecting = self.flag_is_collecting
