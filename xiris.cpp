@@ -275,7 +275,8 @@ std::pair<bool, std::string> InitXirisCamera(std::string ipAddress, float frame_
 
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-    if (!camera->setAutoGainMode(WeldSDK::AutoControlModes::Continuous)) {
+    //if (!camera->setAutoGainMode(WeldSDK::AutoControlModes::Continuous)) {
+    if (!camera->setGSGainMode(WeldSDK::GlobalShutterGainMode::HighGain)) {
 
         msg = "Camera set auto gain mode failed";
     }
