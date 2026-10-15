@@ -34,8 +34,8 @@ class RSI(sensors.BaseSensor):
 
     def detect(self):
 
-        param = '-n' if os.sys.platform.lower() == 'win32' else '-c'
-        timeout_param = '-w' if os.sys.platform.lower() == 'win32' else '-W'
+        param = '-n' if os.sys.platform.lower() == 'win32' else '-c' # type: ignore
+        timeout_param = '-w' if os.sys.platform.lower() == 'win32' else '-W' # type: ignore
 
         result = subprocess.run(f"ping {param} 1 {timeout_param} 1 {self.recv_ip}", capture_output = True, text = True)
 
@@ -69,7 +69,7 @@ class RSI(sensors.BaseSensor):
 
             while data_time - sample_start < 1e9:
 
-                data = self.socket.recv(1024)
+                data = self.socket.recv(1024) # type: ignore
                 data_time = time.time_ns() # Get timestamp immediately after receiving data TODO: RSI needs to report a send time instead of us writing a read time
 
                 data_str = data.decode('utf-8') # store recieved string as str, not byte array
@@ -89,13 +89,13 @@ class RSI(sensors.BaseSensor):
                 # construct our XML response with the TreeBuilder class. I have assumed that the robot wants to see <root><IPOC></IPOC>...</root>. This may take testing/manual deepdive to confirm
                 response = ET.TreeBuilder()
                 response.start(root.tag, root.attrib) # add root
-                response.start(ipoc.tag, ipoc.attrib) # add child
-                response.data(str(ipoc.text)) # add child data
-                response.end(ipoc.tag) # we must close elements in hierarchical order
+                response.start(ipoc.tag, ipoc.attrib) # type: ignore ; add child
+                response.data(str(ipoc.text)) # type: ignore ; add child data
+                response.end(ipoc.tag) # type: ignore ; we must close elements in hierarchical order
 
                 # build arbitrary response values
                 for tag, fn in zip(self.send_cols, self.send_fns):
-                    response.start(tag)
+                    response.start(tag) # type: ignore
                     response.data(str(fn())) # TODO: what arguments might a general function need here?
                     response.end(tag)
 
@@ -104,7 +104,7 @@ class RSI(sensors.BaseSensor):
 
                 response = ET.tostring(resp_root, encoding='utf-8')
                 logger.debug(response) # PRINT FOR DEBUG
-                self.socket.send(response) # send the constructed response string to the KUKA over socket
+                self.socket.send(response) # type: ignore ; send the constructed response string to the KUKA over socket
                 
         except socket.timeout:
             pass
@@ -114,6 +114,8 @@ class RSI(sensors.BaseSensor):
     def stop_collection(self):
        
        super().stop_collection()
+
+       assert self.socket is socket.SocketType
 
        self.socket.close()
 

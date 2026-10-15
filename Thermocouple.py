@@ -19,7 +19,7 @@ class ThermocoupleDAQ(sensors.BaseSensor):
        self.name             = 'ThermocoupleDAQ'
        self.acquisition_rate = 3.5 # Hz
        self.shape            = (4,) # each sample of the sensor produces 4 values
-       self.columns          = ('Thermocouple Channel',)
+       self.columns          = ('sample',)
 
        self.device_name = device_name
        self.task = None

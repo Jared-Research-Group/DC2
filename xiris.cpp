@@ -1,6 +1,7 @@
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/string.h>
 #include <nanobind/stl/pair.h>
+#include <nanobind/stl/vector.h>
 
 #include <string>
 #include <queue>
@@ -227,7 +228,7 @@ std::shared_ptr<MyXirisCamera> camera;
 
 // need buffer initialization for storing recorded frames!!!!!!!!!
 // connect to camera and set user's desired settings.
-std::pair<bool, std::string> InitXirisCamera(std::string ipAddress, float frame_rate = -1) {
+std::pair<bool, std::string> InitXirisCamera(std::string ipAddress, float frame_rate = -1, std::vector<int> AoI = {0, 512, 0, 640}) { // AOI: {left, right, top, bottom}
     std::string msg = "";
 
     camera = std::make_shared<MyXirisCamera>(ipAddress);
@@ -294,6 +295,12 @@ std::pair<bool, std::string> InitXirisCamera(std::string ipAddress, float frame_
         }
     }
 
+    WeldSDK::Rectangle AoI_rect = WeldSDK::Rectangle(AoI[0], AoI[2], AoI[1], AoI[3]);
+    if (!camera->setAOI(AoI_rect)) {
+
+        msg = "Camera set AoI failed";
+    }
+
     if (msg != "") {
         return std::make_pair(false, msg);
     } else {
@@ -348,7 +355,7 @@ void XirisDeleteCamera() {
 // define python bindings
 NB_MODULE(xiris, m) {
     m.def("detectCamera", &DetectXirisCamera, "timeout"_a = 10);
-    m.def("initCamera", &InitXirisCamera, "ipAddress"_a, "frame_rate"_a = -1);
+    m.def("initCamera", &InitXirisCamera, "ipAddress"_a, "frame_rate"_a = -1, "AoI"_a = std::vector<int> {0, 512, 0, 640});
     m.def("startCamera", &XirisStartRecording);
     m.def("sampleCamera", &XirisGetFrame);
     m.def("stopCamera", &XirisStopRecording);
