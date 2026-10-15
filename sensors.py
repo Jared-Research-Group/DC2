@@ -56,9 +56,6 @@ class BaseSensor:
         # if we are handling one/multiple 1D timeseries columns, chunk down each column separately (allow for selective column reads)
         if len(self.shape) < 1:
             self.data_chunk = self.time_chunk
-
-        elif len(self.shape) == 1:
-            self.data_chunk = self.time_chunk + (1,)
         
         # if we are handling 2D+ data, don't bother to chunk in dimensions other than time
         else:
