@@ -82,24 +82,28 @@ class Xiris(sensors.BaseSensor):
                 self.buffers.put(buffer)
                 self.buffer_times.put(buffer_time)
 
-    def convertFrame(data):
+    def _split_raw_frame(data):
         """Efficiently read raw frame data using NumPy bulk read instead of pixel-by-pixel loop"""
+
+        header = data[0:50]
     
-        with io.BytesIO(data) as frame:
-            frame.read(8)  # Skip header
-            left   = int.from_bytes(frame.read(4), 'little')
-            top    = int.from_bytes(frame.read(4), 'little')
-            right  = int.from_bytes(frame.read(4), 'little')
-            bottom = int.from_bytes(frame.read(4), 'little')
-            width  = int.from_bytes(frame.read(4), 'little')
-            height = bottom - top
-    
-            frame.read(28)  # Skip remaining header
+        with io.BytesIO(header) as h:
+            h.read(8)  # Skip header
+            left   = int.from_bytes(h.read(4), 'little')
+            top    = int.from_bytes(h.read(4), 'little')
+            right  = int.from_bytes(h.read(4), 'little')
+            bottom = int.from_bytes(h.read(4), 'little')
+            width  = int.from_bytes(h.read(4), 'little')
+
+        height = bottom - top
+        img_size = 2 * width * height
         
-            img = Image.frombytes('I;16', [width, height], frame.read(2 * width * height))
-            intensity = np.asarray(img) * 2**2
+        img = Image.frombytes('I;16', [width, height], data[50:img_size + 50])
+        img = np.asarray(img) * 2**2
+
+        footer = data[img_size + 50:]
     
-        return intensity
+        return header, img, footer
 
     def sample_sensor(self):
 
