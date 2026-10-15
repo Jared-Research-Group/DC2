@@ -1,9 +1,3 @@
-'''
-This version of the data collection script changes the order of operations to initiate data collection.
-Original:Run script> Press Enter > Select output directory > Initialize sensors > Start data collection (automatic)
-This version: Run script > Press Enter > Select Output Directory > Initialize sensors > Press Enter > Start collection
-'''
-
 # generic imports
 import os
 from datetime import datetime

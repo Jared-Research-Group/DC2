@@ -13,7 +13,7 @@ class FLIR(sensors.BaseSensor):
 
         self.name = 'FLIR'
         self.acquisition_rate = 30 # Hz
-        self.shape = (464, 348)
+        self.shape = (348, 464)
         self.columns = ('FLIR')
 
         self.system = PySpin.System.GetInstance()

@@ -21,7 +21,7 @@ class BaseSensor:
         
         self.name             = '' # name of sensor
         self.acquisition_rate = None # expected acquisition rate. Used to determine zarr chunk size
-        self.shape            = tuple() # shape of a single sample. e.g. 64x64 image = (,64,64); 1D timeseries = (1,) 
+        self.shape            = tuple() # shape of a single sample. e.g. 64x64 image = (,64,64); 1D timeseries = tuple(); 2D timeseries = (2,) 
         self.dtype            = np.float64
         self.columns          = tuple()
         
@@ -32,7 +32,7 @@ class BaseSensor:
         self.collector_thread = None
         self.writer_thread    = None
 
-        self.group   = None
+        self.group        = None
         self.time_chunk   = None
         self.data_chunk   = None
         self.buffer_len   = None
@@ -83,7 +83,7 @@ class BaseSensor:
             self.data = self.group.create_array(name = 'data', 
                                                 shape = (0,) + self.shape, 
                                                 chunks = self.data_chunk, 
-                                                dimension_names = ('time',) + self.columns,
+                                                dimension_names = ('sample',) + self.columns,
                                                 dtype = self.dtype)
             
             self.group.attrs['acquisition_rate'] = self.acquisition_rate
