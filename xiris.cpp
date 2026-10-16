@@ -16,8 +16,6 @@
 namespace nb = nanobind;
 using namespace nb::literals;
 
-#define EPOCH_DIFF_100NS 116444736000000000ULL // number of 100NS between FILETIME and unix time starts
-
 // we need a special thread-safe queue type because we will be reading from MyXirisCamera's frameBuffer queue in this thread while the SDK writes to the queue
 template <typename T>
 class ThreadSafeQueue {
@@ -68,7 +66,7 @@ class MyXirisCamera:
 
         std::string ipAddress;
         bool isRecording = false;
-        ThreadSafeQueue<std::pair<ULONGLONG, std::vector<uint8_t>>> frameBuffer;
+        ThreadSafeQueue<std::vector<uint8_t>> frameBuffer;
 
         MyXirisCamera(const std::string ip, WeldSDK::CameraClass type = WeldSDK::CameraClass::XVT1800, bool recordRaw = true, bool recordPng = false):
             WeldSDK::WeldCamera(),
@@ -120,12 +118,6 @@ class MyXirisCamera:
 
             if (isRecording) {
                 try {
-                    FILETIME frame_time;
-                    GetSystemTimePreciseAsFileTime(&frame_time);
-
-                    ULONGLONG frame_time_100ns = ((ULONGLONG)frame_time.dwHighDateTime << 32) | frame_time.dwLowDateTime;
-                    ULONGLONG frame_time_ns = (frame_time_100ns - EPOCH_DIFF_100NS) * 100; // start time in DC2 format
-                    
                     // image in args becomes CRawImage
                     XImageLib::CRawImage img(*args.RawImage);
 
@@ -136,7 +128,7 @@ class MyXirisCamera:
                     std::memcpy(bytes.data(), &img, sizeof(XImageLib::CRawImage));
 
                     // stick our image into the frame queue
-                    frameBuffer.push(std::make_pair(frame_time_ns, bytes));
+                    frameBuffer.push(bytes);
                 } 
                 catch (const std::exception& e) {
                     printf("Error saving frame: %s", (char*)e.what());
@@ -247,8 +239,6 @@ std::pair<bool, std::string> InitXirisCamera(std::string ipAddress, float frame_
     }
     */ 
 
-    camera->ResetTimeStamps();
-
     // set frame count to 0. Unclear if this will increment during the pause (same frame is still streamed). TODO: investigate
     if (!camera->ResetFrameCounter()) {
 
@@ -320,6 +310,7 @@ std::pair<bool, std::string> XirisStartRecording() {
         return std::make_pair(false, msg);
     } else {
         camera->isRecording = true;
+        camera->ResetTimeStamps();
         camera->Start();
 
     }
@@ -327,14 +318,14 @@ std::pair<bool, std::string> XirisStartRecording() {
     return std::make_pair(true, msg);
 }
 
-std::pair<ULONGLONG, std::vector<uint8_t>> XirisGetFrame() {
+std::vector<uint8_t> XirisGetFrame() {
     if (!camera->frameBuffer.empty()) {
         return camera->frameBuffer.pop();
 
     } else {
 
         std::vector<uint8_t> empty_vector;
-        return std::make_pair((ULONGLONG)0, empty_vector);
+        return empty_vector;
     }
 }
 

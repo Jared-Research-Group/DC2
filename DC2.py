@@ -132,8 +132,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-#TODO
-# 1. Fix timestamps in LEM Box data collection to match the other functions
-# 2. Compile Python scripts with Cython as needed to improve performance
-# 3. Add a GUI to start and stop sensors, select output directory, and display status of sensors
