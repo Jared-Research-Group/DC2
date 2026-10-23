@@ -30,7 +30,7 @@ if (NOT EXISTS "${XirisWeldSDK_ROOT}/include/WeldSDK")
     message(FATAL_ERROR "WeldSDK not found under ${XirisWeldSDK_ROOT}")
 endif()
 
-find_package(Python 3.12 COMPONENTS Interpreter ${DEV_MODULE} REQUIRED)
+find_package(Python 3.12.10 COMPONENTS Interpreter ${DEV_MODULE} REQUIRED)
 
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build." FORCE)
@@ -71,8 +71,8 @@ set_target_properties(XAudioSDK PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES "${XirisWeldSDK_ROOT}/include"
 )
 
-nanobind_add_module(lembox STABLE_ABI NB_STATIC lembox.cpp)
-target_link_libraries(lembox PRIVATE OLDAAPI OLMEM)
+nanobind_add_module(lembox_bindings STABLE_ABI NB_STATIC lembox.cpp)
+target_link_libraries(lembox_bindings PRIVATE OLDAAPI OLMEM)
 
-nanobind_add_module(xiris STABLE_ABI NB_STATIC xiris.cpp)
-target_link_libraries(xiris PRIVATE WeldSDK XAudioSDK)
+nanobind_add_module(xiris_bindings STABLE_ABI NB_STATIC xiris.cpp)
+target_link_libraries(xiris_bindings PRIVATE WeldSDK XAudioSDK)

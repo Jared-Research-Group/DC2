@@ -4,6 +4,8 @@ from datetime import datetime
 import keyboard
 import psutil  
 import zarr
+import threading
+import yaml
 
 # DC2 imports
 import DC2_helpers
@@ -11,12 +13,21 @@ import DC2_helpers
 import thermocouple
 import robot
 import microphone
+import lembox
+import FLIR
+import xiris
 
 # --------------------------------------
 
 logger = DC2_helpers.init_logger(__name__)
 
-sensor_list = [thermocouple.ThermocoupleDAQ, robot.RSI, microphone.Microphone] # list of all sensors we will search for. To use more than one of the same sensor type, add a duplicate to the list
+sensor_list = {'thermocouple':thermocouple.ThermocoupleDAQ, 
+               'robot': robot.RSI, 
+               'microphone': microphone.Microphone, 
+               'lembox': lembox.LEMBox, 
+               'flir': FLIR.FLIR, 
+               'xiris': xiris.Xiris,
+               } # list of all sensors we will search for. To use more than one of the same sensor type, add a duplicate to the list
         
 class DataCollectionSystem:
     
@@ -26,11 +37,18 @@ class DataCollectionSystem:
         self.sensors = set()
         self.file_prefix = file_prefix
         
+        self.expected_sensors = []
+        
+        with open('config.yaml', 'r') as f:
+            data = yaml.safe_load(f)
+            
+            self.expected_sensors = [sensor_list[sensor] for sensor in data['allowed_sensors']]
+        
     def test_connection(self):
         
         logger.debug('Testing sensor connections...')
         
-        for expected_sensor in sensor_list:
+        for expected_sensor in self.expected_sensors:
             
             sensor = expected_sensor()
             
@@ -64,7 +82,7 @@ class DataCollectionSystem:
                 
             except Exception as e:
 
-                logger.error(e)
+                logger.error(sensor.name + ': ' + str(e))
                 del sensor
 
         # return value tells us if any sensors successfully initialized
@@ -78,18 +96,27 @@ class DataCollectionSystem:
 
             try: sensor.start_collection()
 
-            except Exception as e: logger.error(e)
+            except Exception as e: logger.error(str(e))
         
 
     def stop_collection(self):
 
-        logger.debug('Stopping collection...')
+        logger.info('Stopping collection...')
+        
+        stop_threads = []
 
         for sensor in self.sensors:
 
-            try: sensor.stop_collection()
+            try: 
+                
+                stop_threads.append(threading.Thread(target = sensor.stop_collection, name = sensor.name + '_stopper_thread'))
+                stop_threads[-1].start()
 
-            except Exception as e: logger.error(e)
+            except Exception as e: logger.error(str(e))
+            
+        for thread in stop_threads:
+            thread.join()
+
 
 def main():
 
@@ -124,7 +151,12 @@ def main():
 
     while True:
 
-        if keyboard.is_pressed('q'):
+        try:
+            if keyboard.is_pressed('q'):
+                system.stop_collection()
+                break
+            
+        except KeyboardInterrupt:
             system.stop_collection()
             break
 

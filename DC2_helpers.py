@@ -6,6 +6,8 @@ import keyboard
 from datetime import datetime
 import numpy as np
 
+import matplotlib.pyplot as plt
+
 def init_logger(script_name):
     
     logging.basicConfig(level = logging.DEBUG)
@@ -70,6 +72,10 @@ def single_sensor_display(sensor_obj, sensor_args = {}):
 
         def __init__(self, sensor_args):
             super(printing_sensor, self).__init__(**sensor_args)
+            
+            if sensor_obj.__name__ == 'Xiris':
+                
+                self.fig, self.ax = plt.subplots(1, 1, layout='constrained')
 
         if issubclass(sensor_obj, sensors.BufferedSensor):
             def sample_sensor(self, *args, **kwargs):
@@ -77,20 +83,26 @@ def single_sensor_display(sensor_obj, sensor_args = {}):
                 ret = super(printing_sensor, self).sample_sensor(*args, **kwargs)
 
                 if self.buffer.size > 0:
-                    # while self.buffer_time holds a list of samples, index another layer into self.buffer / self.buffer_time
-                    #while not type(self.buffer_time) in [np.uint64, int]:
-                        #self.buffer_time = self.buffer_time[-1]
-                        #self.buffer      = self.buffer[-1]
-                        
-                    #self.buffer_time = self.buffer_time[-1]
-                    #self.buffer = self.buffer[:, -1]
-
-                    #print(f'{sensor_obj.__name__}\ttime: {datetime.fromtimestamp(self.buffer_time * 1e-9)}\tvalue: {str(self.buffer):<20}', end='\r') # flush=True)
-                    
                     print(self.buffer)
                 
                 return ret
-
+            
+        elif sensor_obj.__name__ == 'Xiris':
+            
+            def sample_sensor(self, *args, **kwargs):
+                global fig, ax
+                
+                ret = super(printing_sensor, self).sample_sensor(*args, **kwargs)
+                
+                #self.ax.imshow(self.sample)
+                #plt.show()
+                
+                print(self.sample)
+                
+                return ret
+                
+                
+            
         else:
             def sample_sensor(self, *args, **kwargs):
 
@@ -99,10 +111,15 @@ def single_sensor_display(sensor_obj, sensor_args = {}):
                 while not type(self.sample_time) in [np.uint64, int]:
                     self.sample_time = self.sample_time[-1]
                     self.sample      = self.sample[-1]
-
-                if not isinstance(self.sample, bytes): print(f'{sensor_obj.__name__}\ttime: {datetime.fromtimestamp(self.sample_time * 1e-9)}\tvalue: {self.sample:<20}', end='\r') # flush=True)
-                else:                                  print(f'{sensor_obj.__name__}\ttime: {datetime.fromtimestamp(self.sample_time * 1e-9)}\tvalue: {self.sample}', end='\r')
+                    
+                print(self.sample)
+                    
+                if len(self.sample.shape) > 1:
+                    print(f'{sensor_obj.__name__}\ttime: {datetime.fromtimestamp(self.sample_time * 1e-9)}\tvalue: {self.sample}', end='\r')       
                 
+                else:
+                    print(f'{sensor_obj.__name__}\ttime: {datetime.fromtimestamp(self.sample_time * 1e-9)}\tvalue: {self.sample:<20}', end='\r')      
+                          
                 return ret
 
     logger = logging.getLogger('__main__')

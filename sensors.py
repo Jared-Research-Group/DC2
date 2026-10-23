@@ -51,7 +51,7 @@ class BaseSensor:
         assert isinstance(self.acquisition_rate, (float, int))
         
         # chunk to 1MB chunks (recommendation of zarr docs)
-        self.time_chunk = (math.ceil(10 ** 6 / (math.prod(self.shape) * np.dtype(self.dtype).itemsize)),)     # TODO: what type are we using? Always float/int64?
+        self.time_chunk = (math.ceil(10 ** 6 / (math.prod(self.shape) * np.dtype(self.dtype).itemsize)),)
         
         # if we are handling one/multiple 1D timeseries columns, chunk down each column separately (allow for selective column reads)
         if len(self.shape) < 1:
@@ -61,7 +61,7 @@ class BaseSensor:
         else:
             self.data_chunk = self.time_chunk + self.shape
 
-        self.buffer_len = min(math.ceil(self.time_chunk[0] / 10), math.ceil(self.acquisition_rate * .5)) # buffer is the lesser of: 10% of a chunk size; amount of data collected in 5 seconds
+        self.buffer_len = min(math.ceil(self.time_chunk[0] / 1), math.ceil(self.acquisition_rate * .5)) # buffer is the lesser of: 10% of a chunk size; amount of data collected in 5 seconds
         self.buffer_len = 2 ** math.floor(np.log2(self.buffer_len)) # lower-bounding power of 2
 
         logger.info(f'time_chunk: {self.time_chunk}\ndata_chunk: {self.data_chunk}\nbuffer_len: {self.buffer_len}')
@@ -162,19 +162,22 @@ class BaseSensor:
                 self.data.append(self.buffers.get())
                 self.time.append(self.buffer_times.get())
                 
+                print(f'{self.name}: len == {self.buffers.qsize()}')
+                
     
     # stop threaded process
     def stop_collection(self):
 
+        print(f'{self.name} is stopping...')
         assert isinstance(self.collector_thread, threading.Thread)
         
         if self.group is not None:
-            assert isinstance(self.writer_thread   , threading.Thread)
+            assert isinstance(self.writer_thread, threading.Thread)
 
         with self.lock:
             flag_is_collecting = self.flag_is_collecting
 
-        if self.flag_is_collecting:
+        if flag_is_collecting:
 
             with self.lock:
                 self.flag_is_collecting = False

@@ -2,11 +2,19 @@
 #include <nanobind/stl/pair.h>
 #include <nanobind/stl/vector.h>
 #include <nanobind/stl/string.h>
+#include <nanobind/stl/tuple.h>
 
 #include <string>
 #include <queue>
 #include <vector>
 #include <mutex>
+#include <cmath>
+#include <tuple>
+#include "json.hpp"
+
+#include <iostream>
+#include <iomanip>
+#include <typeinfo>
 
 #include <windows.h>
 #include "WeldSDK/WeldCamera.h"
@@ -66,7 +74,9 @@ class MyXirisCamera:
 
         std::string ipAddress;
         bool isRecording = false;
-        ThreadSafeQueue<std::vector<uint8_t>> frameBuffer;
+        ThreadSafeQueue<std::uint64_t> timeBuffer;
+        ThreadSafeQueue<std::vector<uint16_t>> frameBuffer;
+        ThreadSafeQueue<std::string> metaBuffer;
 
         MyXirisCamera(const std::string ip, WeldSDK::CameraClass type = WeldSDK::CameraClass::XVT1800, bool recordRaw = true, bool recordPng = false):
             WeldSDK::WeldCamera(),
@@ -118,20 +128,27 @@ class MyXirisCamera:
 
             if (isRecording) {
                 try {
+
                     // image in args becomes CRawImage
-                    XImageLib::CRawImage img(*args.RawImage);
+                    XirisCommon::XImage *img = args.RawImage;
+
+                    int img_size = img->height * img->width * 2;
 
                     // initialize a vector of bytes of correct size ot hold the image we found
-                    std::vector<uint8_t> bytes(sizeof(XImageLib::CRawImage));
+                    std::vector<uint16_t> dat(img_size / 2);
 
                     // copy our image into the byte array
-                    std::memcpy(bytes.data(), &img, sizeof(XImageLib::CRawImage));
+                    std::memcpy(dat.data(), img->data, img_size);     // img.data is NOT the byte string we get when we save a frame. we need to find the metadata too
 
                     // stick our image into the frame queue
-                    frameBuffer.push(bytes);
+                    frameBuffer.push(dat);
+                    timeBuffer.push((uint64_t)(img->timestamp * std::pow(10, 9)));
+
+                    metaBuffer.push(img->metaData.dump());
+
                 } 
                 catch (const std::exception& e) {
-                    printf("Error saving frame: %s", (char*)e.what());
+                    std::cout << "Error saving frame: " << e.what() << std::endl;
                 }
             }
 
@@ -281,13 +298,14 @@ std::pair<bool, std::string> InitXirisCamera(std::string ipAddress, float frame_
         }
     } else {
 
-        if (!camera->setGSFrameRateLimit(frame_rate)) {
+        if (!camera->setGSFrameRateLimit(frame_rate) || !camera->setGSFrameRateLimitEnabled(true)) {
 
             msg = "Camera set frame rate limit failed";
         }
     }
 
-    WeldSDK::Rectangle AoI_rect = WeldSDK::Rectangle(AoI[0], AoI[2], AoI[1], AoI[3]);
+    XirisCommon::Rect AoI_rect = XirisCommon::Rect::Rect(AoI[2], AoI[0], AoI[3], AoI[1]);
+
     if (!camera->setAOI(AoI_rect)) {
 
         msg = "Camera set AoI failed";
@@ -318,21 +336,32 @@ std::pair<bool, std::string> XirisStartRecording() {
     return std::make_pair(true, msg);
 }
 
-std::vector<uint8_t> XirisGetFrame() {
+std::tuple<std::vector<uint16_t>, uint64_t, std::string> XirisGetFrame() {
     if (!camera->frameBuffer.empty()) {
-        return camera->frameBuffer.pop();
+
+        std::vector<uint16_t> img = camera->frameBuffer.pop();
+        uint64_t time = camera->timeBuffer.pop();
+        std::string meta = camera->metaBuffer.pop();
+
+        return std::tuple(img, time, meta);
 
     } else {
 
-        std::vector<uint8_t> empty_vector;
-        return empty_vector;
+        std::vector<uint16_t> empty_vector;
+        return std::tuple(empty_vector, 0, "");
     }
 }
 
 bool XirisStopRecording() {
 
+    std::cout << "starting stop..." << std::endl;
+
     camera->BeginStop();
-    return camera->WaitForStopComplete();
+    bool stopped = camera->WaitForStopComplete();
+
+    std::cout << "stop complete..." << std::endl;
+
+    return stopped;
 
 }
 
@@ -346,7 +375,7 @@ void XirisDeleteCamera() {
 }
 
 // define python bindings
-NB_MODULE(xiris, m) {
+NB_MODULE(xiris_bindings, m) {
     m.def("detectCamera", &DetectXirisCamera, "timeout"_a = 10);
     m.def("initCamera", &InitXirisCamera, "ipAddress"_a, "frame_rate"_a = -1, "AoI"_a = std::vector<int> {0, 512, 0, 640});
     m.def("startCamera", &XirisStartRecording);

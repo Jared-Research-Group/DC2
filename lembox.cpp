@@ -230,7 +230,7 @@ VOID deleteBoard() {
 }
 
 
-NB_MODULE(lembox, m) {
+NB_MODULE(lembox_bindings, m) {
     m.def("detectBoard", &detectBoard);
     m.def("deleteBoard", &deleteBoard);
     m.def("initBoard"  , &initBoard, "freq"_a = 20000., "buffer_len"_a = 1024);
